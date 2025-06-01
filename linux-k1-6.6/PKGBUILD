@@ -128,6 +128,12 @@ _package() {
   mkdir -p "$dtb_dir"
   make INSTALL_DTBS_PATH="$dtb_dir" dtbs_install
 
+  # 扁平化 dtb 目录
+  find "$dtb_dir" -type f -name '*.dtb' -exec mv {} "$dtb_dir" \;
+  find "$dtb_dir" -mindepth 1 -type d -exec rm -r {} +
+
+  echo "DTBs installed to $dtb_dir"
+
   echo "Installing pkgbase marker..."
   echo "$pkgbase" | install -Dm644 /dev/stdin "$pkgdir/usr/lib/modules/$modules_version/pkgbase"
 
@@ -142,19 +148,18 @@ _package-headers() {
   export ARCH=riscv
   export CROSS_COMPILE=riscv64-unknown-linux-gnu-
 
-
   cd $_srcname
   local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
   echo "Installing build files..."
   install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
-    localversion.* version vmlinux
+    localversion.* version
   install -Dt "$builddir/kernel" -m644 kernel/Makefile
   install -Dt "$builddir/arch/riscv" -m644 arch/riscv/Makefile
   cp -t "$builddir" -a scripts
 
   # required when DEBUG_INFO_BTF_MODULES is enabled
-  install -Dt "$builddir/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids
+  # install -Dt "$builddir/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids
 
   echo "Installing headers..."
   cp -t "$builddir" -a include
@@ -210,8 +215,9 @@ _package-headers() {
     esac
   done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
 
-  echo "Stripping vmlinux..."
-  strip -v $STRIP_STATIC "$builddir/vmlinux"
+  echo "Skipping strip of vmlinux (RISC-V ELF)..."
+  # strip -v $STRIP_STATIC "$builddir/vmlinux"
+
 
   echo "Adding symlink..."
   mkdir -p "$pkgdir/usr/src"
