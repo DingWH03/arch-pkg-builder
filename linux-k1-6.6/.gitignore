@@ -1,0 +1,4 @@
+linux-6.6
+pkg
+src
+*.pkg.tar.zst
